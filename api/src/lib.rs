@@ -1,4 +1,5 @@
 pub mod core;
+pub mod curve;
 pub mod sha256;
 
 use std::fmt::{Display, Formatter, Result};

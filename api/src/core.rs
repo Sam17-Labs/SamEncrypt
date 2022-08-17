@@ -1,14 +1,10 @@
-
-
+use crate::curve::{Curve, Point, Scalar};
 use crate::ByteVector;
 
-
-
-
-
+// TODO: Remove the allow(dead_code) macro after impl
 
 //#[derive(Debug, Clone)]
-#[warn(dead_code)]
+#[allow(dead_code)]
 pub(crate) struct ReEncryptionKey {
     r1: ByteVector,
     r2: ByteVector,
@@ -16,7 +12,7 @@ pub(crate) struct ReEncryptionKey {
 }
 
 //#[derive(Debug, Clone)]
-#[warn(dead_code)]
+#[allow(dead_code)]
 pub(crate) struct EncryptedMessage {
     tag: ByteVector,
     encrypted_key: ByteVector,
@@ -25,7 +21,9 @@ pub(crate) struct EncryptedMessage {
     data: ByteVector,
 }
 
-#[warn(dead_code)]
+//TODO: come up with descriptive field names. Haven't done it now because 
+// I'm not yet exactly sure what these vectors represent
+#[allow(dead_code)]
 pub(crate) struct ReEncryptedMessage {
     d1: ByteVector,
     d2: ByteVector,
@@ -34,11 +32,13 @@ pub(crate) struct ReEncryptedMessage {
     d5: ByteVector,
 }
 
-// TODO(blaise, berwa): Impls for Curve, Scalar, Point 
-#[warn(dead_code)]
+#[allow(dead_code)]
 pub(crate) struct PREState {
-    //curve: Curve,
-    //private_key: Scalar,
-    //public_key: Point,
+    curve: Curve,
+    private_key: Scalar,
+    public_key: Point,
 }
 
+impl PREState {
+    // TODO(blaise, berwa)
+}
