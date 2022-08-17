@@ -1,8 +1,14 @@
 [package]
-name = "se-pre-scheme"
+name = "cli-se-pre"
 version = "0.1.0"
+authors = [
+    "Blaise Munyampirwa <blaise@sam17.co>",
+    "Roberto Berwa <berwa@sam17.co>"
+]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+
 [dependencies]
+se_pre_scheme = {path = "../api" }
