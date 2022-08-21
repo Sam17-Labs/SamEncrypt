@@ -23,36 +23,36 @@ pub(crate) struct Curve {
 
 #[allow(dead_code)]
 impl Scalar {
-    fn new() -> Self {
+    pub fn new() -> Self {
         //TODO
         Scalar {}
     }
-    fn add(&self, _scalar: &Scalar) -> Result<Self, PREError> {
+    pub fn add(&self, _scalar: &Scalar) -> Result<Self, PREError> {
         //TODO
         Ok(Self {})
     }
-    fn subtract(&self, _scalar: &Scalar) -> Result<Self, PREError> {
+    pub fn subtract(&self, _scalar: &Scalar) -> Result<Self, PREError> {
         //TODO
         Ok(Self {})
     }
-    fn multiply(&self, _scalar: &Scalar) -> Result<Self, PREError> {
+    pub fn multiply(&self, _scalar: &Scalar) -> Result<Self, PREError> {
         //TODO
         Ok(Self {})
     }
 
-    fn copy(&self) -> Result<Self, PREError> {
+    pub fn copy(&self) -> Result<Self, PREError> {
         //TODO
         Ok(Self {})
     }
-    fn inverse(&self) -> Result<Self, PREError> {
+    pub fn inverse(&self) -> Result<Self, PREError> {
         //TODO
         Ok(Self {})
     }
-    fn to_byte_vector(&self) -> Result<Self, PREError> {
+    pub fn to_byte_vector(&self) -> Result<ByteVector, PREError> {
         //TODO
-        Ok(Self {})
+        Ok(vec![])
     }
-    fn equals(&self, _scalar: &Scalar) -> Result<Self, PREError> {
+    pub fn equals(&self, _scalar: &Scalar) -> Result<Self, PREError> {
         //TODO
         Ok(Self {})
     }
@@ -60,34 +60,34 @@ impl Scalar {
 
 #[allow(dead_code)]
 impl Point {
-    fn new() -> Self {
+    pub fn new() -> Self {
         //TODO
         Point {}
     }
-    fn add(&self, _point: &Point) -> Result<Self, PREError> {
+    pub fn add(&self, _point: &Point) -> Result<Self, PREError> {
         //TODO
         Ok(Self {})
     }
-    fn subtract(&self, _point: &Point) -> Result<Self, PREError> {
+    pub fn subtract(&self, _point: &Point) -> Result<Self, PREError> {
         //TODO
         Ok(Self {})
     }
-    fn multiply(&self, _factor: &Scalar) -> Result<Scalar, PREError> {
+    pub fn multiply(&self, _factor: &Scalar) -> Self {
         //TODO
-        Ok(Scalar {})
+        Self {}
     }
 
-    fn to_byte_vector(&self) -> Result<ByteVector, PREError> {
+    pub fn to_byte_vector(&self) -> Result<ByteVector, PREError> {
         //TODO
         Ok(vec![])
     }
 
     // The last two methods need not be implemented. We can just derive cloneable and Equals or PartialEq
-    fn copy(&self) -> Result<Scalar, PREError> {
+    pub fn copy(&self) -> Result<Scalar, PREError> {
         //TODO
         Ok(Scalar {})
     }
-    fn equals(&self, _point: &Point) -> Result<bool, PREError> {
+    pub fn equals(&self, _point: &Point) -> Result<bool, PREError> {
         //TODO
         Ok(false)
     }
@@ -95,30 +95,33 @@ impl Point {
 
 #[allow(dead_code)]
 impl Curve {
-    fn new() -> Self {
+    pub fn new() -> Self {
         //TODO
         Curve {}
     }
-    fn get_basepoint() -> Point {
+    pub fn get_basepoint(&self) -> Point {
         //TODO
         Point {}
     }
 
-    fn get_point_from_byte_vector(&self, _byte_vector: &ByteVector) -> Result<Point, PREError> {
+    pub fn get_point_from_byte_vector(&self, _byte_vector: &ByteVector) -> Result<Point, PREError> {
         //TODO
         Ok(Point {})
     }
 
-    fn get_scalar_from_byte_vector(&self, _byte_vector: &ByteVector) -> Result<Scalar, PREError> {
+    pub fn get_scalar_from_byte_vector(
+        &self,
+        _byte_vector: &ByteVector,
+    ) -> Result<Scalar, PREError> {
         //TODO
         Ok(Scalar {})
     }
 
-    fn get_scalar_from_hash(&self, _array: &[ByteVector]) -> Result<Scalar, PREError> {
+    pub fn get_scalar_from_hash(&self, _array: &[ByteVector]) -> Result<Scalar, PREError> {
         //TODO
         Ok(Scalar {})
     }
-    fn get_random_scalar() -> Scalar {
+    pub fn get_random_scalar(&self) -> Scalar {
         //TODO
         Scalar {}
     }

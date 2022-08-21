@@ -13,6 +13,16 @@ edition = "2021"
 [lib]
 
 
-
 [dependencies]
 sha2 = { version = "0.10.2" }
+anyhow = { version = "1.0.61" }
+
+[[bench]]
+name = "bench"
+harness = false
+
+[profile.release]
+opt-level = 3
+strip = true
+lto = true
+# debug = true
