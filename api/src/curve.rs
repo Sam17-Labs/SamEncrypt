@@ -126,3 +126,6 @@ impl Curve {
         Scalar {}
     }
 }
+
+#[cfg(test)]
+mod test {}

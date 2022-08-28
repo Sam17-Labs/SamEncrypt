@@ -30,3 +30,27 @@ impl Display for PREError {
         )
     }
 }
+
+pub fn encrypt(
+    input: ByteVector,
+    key: ByteVector,
+    nonce: Option<ByteVector>,
+    authenticate: bool,
+) -> Result<ByteVector, PREError> {
+    let allocation_size = if authenticate { 12 } else { 16 };
+    let mut iv = if nonce.is_some() {
+        nonce.unwrap()
+    } else {
+        Vec::with_capacity(allocation_size)
+    };
+
+    let algorithm = if authenticate {
+        "aes-256-gcm"
+    } else {
+        "aes-256-ctr"
+    };
+
+    
+
+    Ok(vec![])
+}

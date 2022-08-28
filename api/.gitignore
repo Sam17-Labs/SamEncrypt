@@ -1,3 +1,6 @@
 
 # temporary directories
 target
+
+#cargo lock
+cargo.lock
