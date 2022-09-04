@@ -1,0 +1,40 @@
+name: Check and Lint
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  push:
+    branches: ["main"]
+
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - run: rustup component add rustfmt
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+      - name: Rustfmt
+        run: cargo fmt --manifest-path=api/Cargo.toml --verbose
+
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: clippy
+          override: true
+
+      - name: Clippy
+        run: cargo clippy --manifest-path=api/Cargo.toml --verbose
