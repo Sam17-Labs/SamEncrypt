@@ -1,10 +1,19 @@
 use crate::ByteVector;
 use crate::PREError;
+pub use curv;
+
+
+pub use curv::elliptic::{curves, ed25519};
+use curv::elliptic::curves::{Point, Scalar, Secp256k1};
+use curv::elliptic::curves::Ed25519;
+
+
 
 /// TODO(blaise, berwa): Implement the following structs
 /// Implementations for the corresponding Typescript interfaces can be found here:
 /// https://github.com/future-tense/curve25519-elliptic/blob/master/src/index.ts
-///
+
+
 
 #[allow(dead_code)]
 pub(crate) struct Scalar {
@@ -24,8 +33,7 @@ pub(crate) struct Curve {
 #[allow(dead_code)]
 impl Scalar {
     pub fn new() -> Self {
-        //TODO
-        Scalar {}
+        Scalar {  }
     }
     pub fn add(&self, _scalar: &Scalar) -> Result<Self, PREError> {
         //TODO

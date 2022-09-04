@@ -1,4 +1,4 @@
-use crate::curve::{Curve, Point, Scalar};
+use crate::elliptic_curve::{Curve, Point, Scalar};
 use crate::{ByteVector, PREError};
 use sha2::{Sha256, Sha512};
 

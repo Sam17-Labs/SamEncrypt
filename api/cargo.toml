@@ -17,6 +17,8 @@ edition = "2021"
 sha2 = { version = "0.10.2" }
 anyhow = { version = "1.0.61" }
 hex = { version = "0.*"}
+cipher = { version = "0.*" }
+curv = { version = "0.*" }
 
 # [[bench]]
 # name = "bench"
