@@ -1,137 +1,175 @@
 use crate::ByteVector;
 use crate::PREError;
-pub use curv;
+use serde::{Deserialize, Serialize};
 
+pub use curv::elliptic::curves::Ed25519;
+pub use curv::elliptic::curves::EncodedPoint;
+pub use curv::elliptic::curves::EncodedScalar;
+pub use curv::elliptic::curves::Point;
+pub use curv::elliptic::curves::Scalar;
 
-pub use curv::elliptic::{curves, ed25519};
-use curv::elliptic::curves::{Point, Scalar, Secp256k1};
-use curv::elliptic::curves::Ed25519;
+use crate::hashing::hash_input;
+use sha2::Sha256;
 
-
-
-/// TODO(blaise, berwa): Implement the following structs
-/// Implementations for the corresponding Typescript interfaces can be found here:
-/// https://github.com/future-tense/curve25519-elliptic/blob/master/src/index.ts
-
-
-
-#[allow(dead_code)]
-pub(crate) struct Scalar {
-    //TODO: struct definition
+pub trait CurveParameter {
+    fn name(&self) -> &'static str;
 }
 
-#[allow(dead_code)]
-pub(crate) struct Point {
-    //TODO: struct definition
+#[derive(Clone)]
+pub(crate) struct ECScalar {
+    value: Scalar<Ed25519>,
 }
 
-#[allow(dead_code)]
+#[derive(Clone)]
+pub(crate) struct ECPoint {
+    value: Point<Ed25519>,
+}
+
 pub(crate) struct Curve {
-    //TODO: struct definition
+    pub base_point: ECPoint,
 }
 
-#[allow(dead_code)]
-impl Scalar {
-    pub fn new() -> Self {
-        Scalar {  }
-    }
-    pub fn add(&self, _scalar: &Scalar) -> Result<Self, PREError> {
-        //TODO
-        Ok(Self {})
-    }
-    pub fn subtract(&self, _scalar: &Scalar) -> Result<Self, PREError> {
-        //TODO
-        Ok(Self {})
-    }
-    pub fn multiply(&self, _scalar: &Scalar) -> Result<Self, PREError> {
-        //TODO
-        Ok(Self {})
-    }
-
-    pub fn copy(&self) -> Result<Self, PREError> {
-        //TODO
-        Ok(Self {})
-    }
-    pub fn inverse(&self) -> Result<Self, PREError> {
-        //TODO
-        Ok(Self {})
-    }
-    pub fn to_byte_vector(&self) -> Result<ByteVector, PREError> {
-        //TODO
-        Ok(vec![])
-    }
-    pub fn equals(&self, _scalar: &Scalar) -> Result<Self, PREError> {
-        //TODO
-        Ok(Self {})
+impl CurveParameter for ECScalar {
+    fn name(&self) -> &'static str {
+        return "scalar";
     }
 }
 
-#[allow(dead_code)]
-impl Point {
-    pub fn new() -> Self {
-        //TODO
-        Point {}
-    }
-    pub fn add(&self, _point: &Point) -> Result<Self, PREError> {
-        //TODO
-        Ok(Self {})
-    }
-    pub fn subtract(&self, _point: &Point) -> Result<Self, PREError> {
-        //TODO
-        Ok(Self {})
-    }
-    pub fn multiply(&self, _factor: &Scalar) -> Self {
-        //TODO
-        Self {}
-    }
-
-    pub fn to_byte_vector(&self) -> Result<ByteVector, PREError> {
-        //TODO
-        Ok(vec![])
-    }
-
-    // The last two methods need not be implemented. We can just derive cloneable and Equals or PartialEq
-    pub fn copy(&self) -> Result<Scalar, PREError> {
-        //TODO
-        Ok(Scalar {})
-    }
-    pub fn equals(&self, _point: &Point) -> Result<bool, PREError> {
-        //TODO
-        Ok(false)
+impl CurveParameter for ECPoint {
+    fn name(&self) -> &'static str {
+        return "point";
     }
 }
 
-#[allow(dead_code)]
+// Reference to different operation on both scalars and points
+// on an elliptic curve.
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+pub enum ECOp {
+    Add,
+    Multiply,
+    Subtract,
+    Invert,
+}
+
+impl ECScalar {
+    pub fn new(scalar: Scalar<Ed25519>) -> Self {
+        ECScalar { value: scalar }
+    }
+
+    // Carries out basic scalar operations
+    // TODO: remove the overhead of creating a new object every time we evaluate
+    // We can make it no return type, and panic when conditions are not met.
+    // Then do self.value = self.value + scalar.value for instance.
+    pub fn eval(&self, scalar: Option<ECScalar>, operation: ECOp) -> Result<Self, PREError> {
+        match operation {
+            ECOp::Add => Ok(Self::new(self.value.clone() + scalar.unwrap().value)),
+            ECOp::Subtract => Ok(Self::new(self.value.clone() - scalar.unwrap().value)),
+            ECOp::Multiply => Ok(Self::new(self.value.clone() * scalar.unwrap().value)),
+            ECOp::Invert => {
+                assert_eq!(scalar.is_none(), true);
+                match self.value.invert() {
+                    Some(inverse) => Ok(Self::new(inverse)),
+                    None => Err(PREError::ZeroScalarError(String::from(""))),
+                }
+            }
+        }
+    }
+
+    // Serializes the scalar value to bytes
+    pub fn to_bytes(&self) -> ByteVector {
+        let bytes: EncodedScalar<Ed25519> = self.value.to_bytes();
+        (*bytes).to_vec()
+    }
+    // Deserializes the scalar value from bytes
+    pub fn from_bytes(bytes: &[u8]) -> Result<ECScalar, PREError> {
+        let raw_scalar = Scalar::from_bytes(bytes);
+        match raw_scalar {
+            Ok(scalar) => Ok(Self::new(scalar)),
+            Err(error) => Err(PREError::ScalarDeserializationError(format!(
+                "failed to deserialize a scalar from bytes"
+            ))),
+        }
+    }
+
+    // Generates a random non-zero scalar
+    pub fn random() -> Self {
+        Self::new(Scalar::random())
+    }
+
+    pub fn equals(&self, scalar: &ECScalar) -> bool {
+        self.value == scalar.value
+    }
+}
+
+impl ECPoint {
+    pub fn new(point: Point<Ed25519>) -> Self {
+        ECPoint { value: point }
+    }
+
+    pub fn eval(&self, point: &ECPoint, operation: ECOp) -> Result<Self, PREError> {
+        match operation {
+            ECOp::Add => Ok(Self::new(self.value.clone() + point.value.clone())),
+            ECOp::Subtract => Ok(Self::new(self.value.clone() - point.value.clone())),
+            ECOp::Multiply => Err(PREError::DefaultError(format!(
+                "Invalid Operation: EC25519 can only be multiplied by scalars"
+            ))),
+            ECOp::Invert => Err(PREError::DefaultError(format!(
+                "Invalid Operation: cannot invert a point on an elliptic curve"
+            ))),
+        }
+    }
+    // Refactor the code to avoid unnecessary clones
+    pub fn multiply(&self, scalar: &ECScalar) -> Self {
+        Self::new(self.value.clone() * scalar.value.clone())
+    }
+
+    // Serializes the point to bytes
+    pub fn to_bytes(&self) -> ByteVector {
+        let bytes = self.value.to_bytes(true);
+        (*bytes).to_vec()
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> Result<ECPoint, PREError> {
+        let raw_point = Point::from_bytes(bytes);
+        match raw_point {
+            Ok(point) => Ok(Self::new(point)),
+            Err(error) => Err(PREError::ScalarDeserializationError(format!(
+                "failed to deserialize a point from bytes"
+            ))),
+        }
+    }
+
+    pub fn equals(&self, point: &ECPoint) -> bool {
+        self.value == point.value
+    }
+}
+
 impl Curve {
     pub fn new() -> Self {
-        //TODO
-        Curve {}
+        Curve {
+            base_point: Self::get_basepoint(),
+        }
     }
-    pub fn get_basepoint(&self) -> Point {
-        //TODO
-        Point {}
-    }
-
-    pub fn get_point_from_byte_vector(&self, _byte_vector: &ByteVector) -> Result<Point, PREError> {
-        //TODO
-        Ok(Point {})
+    fn get_basepoint() -> ECPoint {
+        ECPoint::new(Point::base_point2().clone())
     }
 
-    pub fn get_scalar_from_byte_vector(
-        &self,
-        _byte_vector: &ByteVector,
-    ) -> Result<Scalar, PREError> {
-        //TODO
-        Ok(Scalar {})
+    pub fn get_point_from_bytes(&self, bytes: &[u8]) -> Result<ECPoint, PREError> {
+        ECPoint::from_bytes(bytes)
     }
 
-    pub fn get_scalar_from_hash(&self, _array: &[ByteVector]) -> Result<Scalar, PREError> {
-        //TODO
-        Ok(Scalar {})
+    pub fn get_scalar_from_bytes(&self, bytes: &[u8]) -> Result<ECScalar, PREError> {
+        ECScalar::from_bytes(bytes)
     }
-    pub fn get_random_scalar(&self) -> Scalar {
-        //TODO
-        Scalar {}
+
+    pub fn get_random_scalar() -> ECScalar {
+        ECScalar::new(Scalar::random())
+    }
+
+    pub fn get_scalar_from_hash(&self, hashable: &[ByteVector]) -> Result<ECScalar, PREError> {
+        let hash_output = hash_input::<Sha256, 32>(hashable.into())?;
+        let scalar = ECScalar::from_bytes(&hash_output);
+        scalar
     }
 }
 

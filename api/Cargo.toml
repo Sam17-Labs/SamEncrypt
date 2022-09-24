@@ -18,7 +18,9 @@ sha2 = { version = "0.10.2" }
 anyhow = { version = "1.0.61" }
 hex = { version = "0.*"}
 cipher = { version = "0.*" }
-curv = { version = "0.*" }
+curv-kzen = { version = "0.9.0" }
+serde = { version = "1.0.144" }
+futures = {version = "0.3.24" }
 
 # [[bench]]
 # name = "bench"

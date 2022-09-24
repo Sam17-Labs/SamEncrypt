@@ -16,6 +16,9 @@ pub enum PREError {
     OverallCheckSumFailure(String),
     DefaultError(String),
     HashingError(String),
+    ZeroScalarError(String),
+    ScalarDeserializationError(String),
+    PointDeserializationError(String),
 }
 
 impl Display for PREError {
@@ -28,14 +31,19 @@ impl Display for PREError {
                 PREError::OverallCheckSumFailure(msg) => format!("OverallCheckSumFailure: {}", msg),
                 PREError::DefaultError(msg) => format!("PREError: {}", msg),
                 PREError::HashingError(msg) => format!("HashingError: {}", msg),
+                PREError::ZeroScalarError(msg) => format!("ZeroScalarError: {}", msg),
+                PREError::ScalarDeserializationError(msg) =>
+                    format!("ScalarDeserializationError: {}", msg),
+                PREError::PointDeserializationError(msg) =>
+                    format!("PointDeserializationError: {}", msg),
             }
         )
     }
 }
 
-pub fn encrypt(
-    _input: ByteVector,
-    _key: ByteVector,
+pub async fn encrypt(
+    _input: &ByteVector,
+    _key: &ByteVector,
     nonce: Option<ByteVector>,
     authenticate: bool,
 ) -> Result<ByteVector, PREError> {
@@ -52,10 +60,14 @@ pub fn encrypt(
         "aes-256-ctr"
     };
 
+    Ok(vec![])
+}
 
-    
-
-
-
+pub async fn decrypt(
+    _input: &ByteVector,
+    _key: &ByteVector,
+    _nonce: Option<ByteVector>,
+    _authenticate: bool,
+) -> Result<ByteVector, PREError> {
     Ok(vec![])
 }
