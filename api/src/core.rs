@@ -2,9 +2,8 @@ use crate::elliptic_curve::{Curve, ECOp, ECPoint, ECScalar};
 use crate::hashing::hash_input;
 use crate::internals::{decrypt, encrypt, generate_random_nonce, ByteVector, PREError};
 use crate::internals::{Nonce, NONCE_SIZE};
-use crate::test_utils::bytes_to_str_utf8;
+// use crate::test_utils::bytes_to_str_utf8;
 use sha2::{Sha256, Sha512};
-use std::str;
 
 #[derive(Debug, Clone)]
 pub(crate) struct ReEncryptionKey {
@@ -80,7 +79,7 @@ impl PREState {
         let random_scalar = Curve::get_random_scalar();
 
         let hash_output = hash_input::<Sha256, 32>(vec![tag.clone(), private_key.clone()])
-            .expect("unable to hash (tag, private key) pair");
+            .expect("Re-Encryption Key Generation Error: unable to hash (tag, private key) pair");
 
         let h = self.curve.get_scalar_from_bytes(&hash_output.to_vec())?;
 
@@ -196,7 +195,7 @@ impl PREState {
             .encrypt_symmetric(&message, &symmetric_encryption_key.to_vec())
             .await;
 
-        // dbg!(message.clone());
+        dbg!(message.clone());
         dbg!(public_key.to_bytes());
 
         let message_check_sum: [u8; 64] =
@@ -438,37 +437,12 @@ impl PREState {
 #[cfg(test)]
 mod self_encryption_tests {
     use super::*;
+    use crate::test_utils::{bytes_to_str_utf8, generate_test_files, remove_test_files};
     use futures::executor::block_on;
     use std::fs;
-    use std::io::prelude::*;
     use std::path::Path;
 
-    const NUM_TEST_FILES: usize = 5;
     const TEST_DIR_PATH: &str = "test-files";
-
-    fn generate_test_files() {
-        fs::create_dir_all(TEST_DIR_PATH).unwrap();
-
-        for i in 0..NUM_TEST_FILES {
-            match fs::File::create(format!("test-files/file{}.txt", i)) {
-                Ok(mut file) => {
-                    let buffer = format!("This is test file {}", i + 1);
-                    file.write_all(buffer.as_bytes())
-                        .expect("failed to write to test file");
-                }
-                Err(_e) => {
-                    panic!(
-                        "{}",
-                        format!("failed to create test file: file{}.txt", i + 1)
-                    );
-                }
-            }
-        }
-    }
-
-    fn remove_test_files() {
-        fs::remove_dir_all(TEST_DIR_PATH).unwrap();
-    }
 
     // Produce a byte vector representation for a given file path
     #[cfg(unix)]
@@ -488,7 +462,7 @@ mod self_encryption_tests {
     }
 
     #[test]
-    fn test_self_encryption() {
+    fn test_simple_self_encryption() {
         let plaintext_messages = generate_plaintext_messages();
         let curve: Curve = Curve::new();
         let pre_state = PREState::new(curve);
@@ -511,30 +485,110 @@ mod self_encryption_tests {
     }
 
     #[test]
-    fn test_file_self_encrypt() {
+    fn test_file_self_encryption() {
         generate_test_files();
+
+        let pre_state: PREState = PREState::new(Curve::new());
 
         for dir_entry in fs::read_dir(TEST_DIR_PATH).unwrap() {
             let path_buf = dir_entry.unwrap().path();
             // let _file = fs::OpenOptions::new().read(true).open(path_buf).expect("Failed to read test file");
 
-            let bytes: ByteVector = path_to_bytes(path_buf.as_path());
+            let contents = std::fs::read_to_string(path_buf.as_path())
+                .expect("Unable to read test file contents");
 
-            let pre_state: PREState = PREState::new(Curve::new());
-            let encrypted_file: EncryptedMessage = block_on(
-                pre_state.self_encrypt(bytes.clone(), String::from("dummy tag").into_bytes()),
-            )
+            let encrypted_file: EncryptedMessage = block_on(pre_state.self_encrypt(
+                contents.clone().as_bytes().to_vec(),
+                String::from("dummy tag").into_bytes(),
+            ))
             .expect("failed to encrypt file");
 
             let decrypted_file: ByteVector =
                 block_on(pre_state.self_decrypt(encrypted_file)).expect("failed to decrypt file");
 
-            assert_eq!(decrypted_file.as_slice(), bytes.as_slice());
+            dbg!(bytes_to_str_utf8(decrypted_file.as_slice()));
+            assert_eq!(decrypted_file.as_slice(), contents.as_bytes());
         }
 
-        remove_test_files();
+        // remove_test_files();
     }
 }
 
 #[cfg(test)]
-mod test_re_encryption {}
+mod test_re_encryption {
+    use super::*;
+    use futures::executor::block_on;
+    use std::fs;
+    const BYTE_LENGTH: usize = 32;
+
+    use crate::test_utils::{bytes_to_str_utf8, generate_test_files, remove_test_files};
+    const TEST_DIR_PATH: &str = "test-files";
+
+    //TODO(blaise): Figure out a better way to test re-encryption key
+    //generation.
+    #[test]
+    fn test_generate_re_encryption_key() {
+        let pre_state: PREState = PREState::new(Curve::new());
+        let public_key = pre_state.public_key.to_bytes();
+        let tag = "dummy tag".as_bytes().to_vec();
+
+        let re_encryption_key = pre_state
+            .generate_re_encryption_key(&public_key, tag.clone())
+            .unwrap();
+
+        assert_eq!(re_encryption_key.r1.len(), BYTE_LENGTH);
+        assert_eq!(re_encryption_key.r2.len(), BYTE_LENGTH);
+        assert_eq!(re_encryption_key.r3.len(), BYTE_LENGTH);
+    }
+
+    #[test]
+    fn test_file_re_encrypt() {
+        generate_test_files();
+
+        let curve = Curve::new();
+        let pre_state: PREState = PREState::new(curve.clone());
+        for dir_entry in fs::read_dir(TEST_DIR_PATH).unwrap() {
+            let path_buf = dir_entry.unwrap().path();
+
+            dbg!(path_buf.clone());
+            let file_contents =
+                std::fs::read_to_string(path_buf.as_path()).expect("Unable to read test file contents.");
+
+            // Self-encrypt the file contents.
+            let encrypted_file: EncryptedMessage = block_on(pre_state.self_encrypt(
+                file_contents.clone().as_bytes().to_vec(),
+                String::from("dummy tag").into_bytes(),
+            ))
+            .expect("failed to self-encrypt test file");
+
+            // Generate a Re-encryption key
+            let public_key: ByteVector = pre_state.public_key.to_bytes();
+            let re_encryption_key: ReEncryptionKey = pre_state
+                .generate_re_encryption_key(&public_key, encrypted_file.tag.clone())
+                .unwrap();
+
+            // Re-encrypt the cipher-text representation of the file under the generated
+            // re-encryption key
+            let re_encrypted_file: ReEncryptedMessage = pre_state
+                .re_encrypt(&public_key, encrypted_file, re_encryption_key, &curve)
+                .expect("failed to re-encrypt test file");
+
+            let decrypted_file_under_rekey: ByteVector =
+                block_on(pre_state.re_decrypt(re_encrypted_file))
+                    .expect("failed to decrypt re-encrypted test file");
+
+            // check equality of the contents of the original file and the decrypted
+            // file
+
+            dbg!(bytes_to_str_utf8(decrypted_file_under_rekey.as_slice()));
+
+            assert_eq!(
+                decrypted_file_under_rekey.as_slice(),
+                file_contents.as_bytes()
+            );
+        }
+        // clean up
+        remove_test_files();
+
+    }
+}

@@ -16,16 +16,17 @@ pub trait CurveParameter {
     fn name(&self) -> &'static str;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct ECScalar {
     value: Scalar<Ed25519>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct ECPoint {
     value: Point<Ed25519>,
 }
 
+#[derive(Debug, Clone)]
 pub(crate) struct Curve {
     pub base_point: ECPoint,
 }

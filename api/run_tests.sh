@@ -1,5 +1,6 @@
 #!/bin/bash
 
+NUM_ARGS = "$#"
 
 if [ "$#"  == 1 ]; then
 	BACKTRACE_VERBOSITY=$1
@@ -21,4 +22,4 @@ cargo build
 
 # Run all package unit tests. --nocapture allows for printing
 # to stdout even with unit tests that pass 
-cargo test -- --nocapture
+cargo test
