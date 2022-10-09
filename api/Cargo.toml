@@ -20,7 +20,11 @@ hex = { version = "0.*"}
 cipher = { version = "0.*" }
 curv-kzen = { version = "0.9.0" }
 serde = { version = "1.0.144" }
-futures = {version = "0.3.24" }
+futures = { version = "0.3.24" }
+aes-gcm-siv = { version = "0.11.1" }
+lazy_static = { version = "1.4.0" }
+rand = { version = "0.8.5" }
+
 
 # [[bench]]
 # name = "bench"

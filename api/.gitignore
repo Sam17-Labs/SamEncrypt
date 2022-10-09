@@ -4,3 +4,7 @@ target
 
 #cargo lock
 cargo.lock
+
+# test files
+src/test-files 
+src/test_sha.bin

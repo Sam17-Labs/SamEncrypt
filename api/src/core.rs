@@ -2,8 +2,8 @@ use crate::elliptic_curve::{Curve, ECOp, ECPoint, ECScalar};
 use crate::{ByteVector, PREError};
 use sha2::{Sha256, Sha512};
 
-use crate::decrypt;
-use crate::encrypt;
+// use crate::decrypt;
+// use crate::encrypt;
 use crate::hashing::hash_input;
 
 #[derive(Debug, Clone)]
@@ -78,7 +78,8 @@ impl PREState {
         let private_key = self.private_key.to_bytes();
         let random_scalar = Curve::get_random_scalar();
 
-        let hash_output = hash_input::<Sha256, 32>(vec![tag.clone(), private_key.clone()])?;
+        let hash_output = hash_input::<Sha256, 32>(vec![tag.clone(), private_key.clone()])
+            .expect("unable to hash (tag, private key) pair");
 
         let h = self.curve.get_scalar_from_bytes(&hash_output.to_vec())?;
 
@@ -102,20 +103,21 @@ impl PREState {
     /// * `data` - The data to encrypt symmetrically
     /// * `key_hash` - The hash value of the secret key with which to encrypt
     ///
-    /// # Returns a byte vector representing the encryption of data under the
-    ///     given secret key
+    /// # Returns a byte vector representing the encryption of data under the given secret key
     ///
     /// TODO(blaise): Figure out what the authenticate boolean variable means.
 
-    async fn encrypt_symmetric(&self, data: &ByteVector, key_hash: &ByteVector) -> ByteVector {
-        let key: &[u8] = &key_hash[0..32];
-        let nonce: &[u8] = &key_hash[32..32 + 12];
+    #[allow(dead_code)]
+    async fn encrypt_symmetric(&self, _data: &ByteVector, _key_hash: &ByteVector) -> ByteVector {
+        // let key: &[u8] = &key_hash[0..32];
+        // let nonce: &[u8] = &key_hash[32..32 + 12];
 
-        let cipher_text: ByteVector = encrypt(data, &key.to_vec(), Some(nonce.to_vec()), false)
-            .await
-            .unwrap();
+        // let cipher_text: ByteVector = encrypt(data, &key.to_vec(), Some(nonce.to_vec()), false)
+        //     .await
+        //     .unwrap();
 
-        cipher_text
+        // cipher_text
+        vec![]
     }
 
     /// Decrypt symmetrically
@@ -125,23 +127,24 @@ impl PREState {
     /// * `data` - The data to encrypt symmetrically
     /// * `key_hash` - The hash value of the secret key with which to encrypt
     ///
-    /// # Returns a byte vector representing the decrypted ciphertext under the
-    ///     given secret key
+    /// # Returns a byte vector representing the decrypted ciphertext under the given secret key
     ///
+    #[allow(dead_code)]
     async fn decrypt_symmetric(
         &self,
-        ciphertext: &ByteVector,
-        key_hash: &ByteVector,
+        _ciphertext: &ByteVector,
+        _key_hash: &ByteVector,
     ) -> ByteVector {
-        let key: &[u8] = &key_hash[0..32];
-        let nonce: &[u8] = &key_hash[32..32 + 12];
+        // let key: &[u8] = &key_hash[0..32];
+        // let nonce: &[u8] = &key_hash[32..32 + 12];
 
-        let original_plain_text: ByteVector =
-            decrypt(ciphertext, &key.to_vec(), Some(nonce.to_vec()), false)
-                .await
-                .unwrap();
+        // let original_plain_text: ByteVector =
+        //     decrypt(ciphertext, &key.to_vec(), Some(nonce.to_vec()), false)
+        //         .await
+        //         .unwrap();
 
-        original_plain_text
+        // original_plain_text
+        vec![]
     }
 
     /// Handles the self-encryption of the original message
@@ -166,7 +169,7 @@ impl PREState {
         // hash 1
         let private_key_vector: Vec<u8> = self.private_key.to_bytes();
         let tag_private_key_hash: [u8; 32] =
-            hash_input::<Sha256, 32>(vec![tag.clone(), private_key_vector])?;
+            hash_input::<Sha256, 32>(vec![tag.clone(), private_key_vector.clone()])?;
 
         let scalar_tag_private_key: ECScalar = self
             .curve
@@ -234,7 +237,7 @@ impl PREState {
             encrypted_message.encrypted_key.clone(),
             encrypted_message.data.clone(),
             encrypted_message.message_check_sum.clone(),
-            alp,
+            alp.clone(),
         ])?;
 
         let size: usize = encrypted_message.overall_check_sum.len();
@@ -295,6 +298,14 @@ impl PREState {
         Ok(data)
     }
 
+    /// Re-encrypts the original plaintext.
+    ///
+    /// # Arguments
+    ///
+    /// * `public_key` - A ByteVector representing the public key with which to re-encrypt
+    /// * `message` - EncryptedMessage (ciphertext) to be re-encrypted
+    /// * `re_encryption_key` - A re-encryption key required to re-encrypt the message
+    /// * `curve` - A specific choice for an elliptic curve.
     #[allow(dead_code)]
     pub fn re_encrypt(
         &self,
@@ -355,11 +366,20 @@ impl PREState {
         })
     }
 
+    /// Decrypts a re-encypted message under a re-encryption key.
+    ///
+    /// # Arguments
+    ///
+    /// * `re_encrypted_message` - A ByteVector representing the re-encrypted
+    ///     message.
     #[allow(dead_code)]
-    pub async fn re_decrypt(&self, d: ReEncryptedMessage) -> Result<ByteVector, PREError> {
-        let d1 = self.curve.get_point_from_bytes(&d.d1)?;
-        let d4 = self.curve.get_point_from_bytes(&d.d4)?;
-        let d5 = self.curve.get_point_from_bytes(&d.d5)?;
+    pub async fn re_decrypt(
+        &self,
+        re_encrypted_message: ReEncryptedMessage,
+    ) -> Result<ByteVector, PREError> {
+        let d1 = self.curve.get_point_from_bytes(&re_encrypted_message.d1)?;
+        let d4 = self.curve.get_point_from_bytes(&re_encrypted_message.d4)?;
+        let d5 = self.curve.get_point_from_bytes(&re_encrypted_message.d5)?;
 
         let txg = d5.multiply(&self.private_key);
 
@@ -367,10 +387,10 @@ impl PREState {
             .curve
             .get_scalar_from_hash(&vec![
                 txg.to_bytes(),
-                d.d2.clone(),
-                d.d3.clone(),
-                d.d4,
-                d.d5,
+                re_encrypted_message.d2.clone(),
+                re_encrypted_message.d3.clone(),
+                re_encrypted_message.d4,
+                re_encrypted_message.d5,
             ])
             .unwrap()
             .eval(None, ECOp::Invert)?;
@@ -381,17 +401,20 @@ impl PREState {
 
         let t_buf = t1.eval(&t2, ECOp::Subtract)?.to_bytes();
         let key = hash_input::<Sha512, 64>(vec![t_buf.clone()])?;
-        let data = self.decrypt_symmetric(&d.d2, &key.to_vec()).await;
+        let data = self
+            .decrypt_symmetric(&re_encrypted_message.d2, &key.to_vec())
+            .await;
 
         //hash 3
         let check2 = hash_input::<Sha512, 64>(vec![data.clone(), t_buf])?;
-        let matching_values =
-            d.d3.iter()
-                .zip(&check2.to_vec())
-                .filter(|&(x, y)| x == y)
-                .count();
+        let matching_values = re_encrypted_message
+            .d3
+            .iter()
+            .zip(&check2.to_vec())
+            .filter(|&(x, y)| x == y)
+            .count();
 
-        if matching_values != d.d3.len() {
+        if matching_values != re_encrypted_message.d3.len() {
             //TODO: figure out what the 181 error means in the original codebase
             return Err(PREError::DefaultError(String::from("181?")));
         }
@@ -400,40 +423,103 @@ impl PREState {
     }
 }
 
-#[cfg(test)]
-mod self_encryption_tests {
-    use super::*;
-    use futures::executor::block_on;
+// #[cfg(test)]
+// mod self_encryption_tests {
+//     use super::*;
+//     use futures::executor::block_on;
+//     use std::fs;
+//     use std::io::prelude::*;
+//     use std::path::Path;
 
-    fn generate_plaintext_messages() -> Vec<(&'static str, &'static str)> {
-        let messages = vec![
-            ("first message to encrypt", "tag1"),
-            ("second message to encrypt", "tag2"),
-            ("third message to encrypt", "tag3"),
-        ];
-        messages
-    }
+//     const NUM_TEST_FILES: usize = 5;
+//     const TEST_DIR_PATH: &str = "test-files";
 
-    #[test]
-    fn test_self_encryption() {
-        let plaintext_messages = generate_plaintext_messages();
-        let curve: Curve = Curve::new();
-        let pre_state = PREState::new(curve);
+//     fn generate_test_files() {
+//         fs::create_dir_all(TEST_DIR_PATH).unwrap();
 
-        for (message, tag) in plaintext_messages {
-            let message_as_bytes = message.as_bytes();
-            let encrypted_message: EncryptedMessage =
-                block_on(pre_state.self_encrypt(message_as_bytes.into(), tag.as_bytes().into()))
-                    .unwrap();
+//         for i in 0..NUM_TEST_FILES {
+//             match fs::File::create(format!("test-files/file{}.txt", i)) {
+//                 Ok(mut file) => {
+//                     let buffer = format!("This is test file {}", i + 1);
+//                     file.write_all(buffer.as_bytes())
+//                         .expect("failed to write to test file");
+//                 }
+//                 Err(_e) => {
+//                     panic!(
+//                         "{}",
+//                         format!("failed to create test file: file{}.txt", i + 1)
+//                     );
+//                 }
+//             }
+//         }
+//     }
 
-            let decrypted_ciphertext: ByteVector =
-                block_on(pre_state.self_decrypt(encrypted_message.clone())).unwrap();
+//     fn remove_test_files() {
+//         fs::remove_dir_all(TEST_DIR_PATH).unwrap();
+//     }
 
-            // check equality of the original text and the decrypted text
-            assert_eq!(decrypted_ciphertext.as_slice(), message_as_bytes);
+//     // Produce a byte vector representation for a given file path
+//     #[cfg(unix)]
+//     fn path_to_bytes<P: AsRef<Path>>(path: P) -> Vec<u8> {
+//         use std::os::unix::ffi::OsStrExt;
 
-            // check equality of the tag used
-            assert_eq!(tag.as_bytes(), encrypted_message.tag.as_slice());
-        }
-    }
-}
+//         path.as_ref().as_os_str().as_bytes().to_vec()
+//     }
+
+//     fn generate_plaintext_messages() -> Vec<(&'static str, &'static str)> {
+//         let messages = vec![
+//             ("first message to encrypt", "tag1"),
+//             ("second message to encrypt", "tag2"),
+//             ("third message to encrypt", "tag3"),
+//         ];
+//         messages
+//     }
+
+//     #[test]
+//     fn test_self_encryption() {
+//         let plaintext_messages = generate_plaintext_messages();
+//         let curve: Curve = Curve::new();
+//         let pre_state = PREState::new(curve);
+
+//         for (message, tag) in plaintext_messages {
+//             let message_as_bytes = message.as_bytes();
+//             let encrypted_message: EncryptedMessage =
+//                 block_on(pre_state.self_encrypt(message_as_bytes.into(), tag.as_bytes().into()))
+//                     .unwrap();
+
+//             let decrypted_ciphertext: ByteVector =
+//                 block_on(pre_state.self_decrypt(encrypted_message.clone())).unwrap();
+
+//             // check equality of the original text and the decrypted text
+//             assert_eq!(decrypted_ciphertext.as_slice(), message_as_bytes);
+
+//             // check equality of the tag used
+//             assert_eq!(tag.as_bytes(), encrypted_message.tag.as_slice());
+//         }
+//     }
+
+//     #[test]
+//     fn test_file_self_encrypt() {
+//         generate_test_files();
+
+//         for dir_entry in fs::read_dir(TEST_DIR_PATH).unwrap() {
+//             let path_buf = dir_entry.unwrap().path();
+//             // let _file = fs::OpenOptions::new().read(true).open(path_buf).expect("Failed to read test file");
+
+//             let bytes: ByteVector = path_to_bytes(path_buf.as_path());
+
+//             let pre_state: PREState = PREState::new(Curve::new());
+//             let encrypted_file: EncryptedMessage = block_on(
+//                 pre_state.self_encrypt(bytes.clone(), String::from("dummy tag").into_bytes()),
+//             )
+//             .expect("failed to encrypt file");
+
+//             let decrypted_file: ByteVector =
+//                 block_on(pre_state.self_decrypt(encrypted_file)).expect("failed to decrypt file");
+
+//             assert_eq!(decrypted_file.as_slice(), bytes.as_slice());
+//         }
+
+//         remove_test_files();
+//     }
+// }

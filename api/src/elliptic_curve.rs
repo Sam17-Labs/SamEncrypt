@@ -8,8 +8,8 @@ pub use curv::elliptic::curves::EncodedScalar;
 pub use curv::elliptic::curves::Point;
 pub use curv::elliptic::curves::Scalar;
 
-use crate::hashing::hash_input;
-use sha2::Sha256;
+// use crate::hashing::hash_input;
+// use sha2::Sha256;
 
 pub trait CurveParameter {
     fn name(&self) -> &'static str;
@@ -85,7 +85,7 @@ impl ECScalar {
         let raw_scalar = Scalar::from_bytes(bytes);
         match raw_scalar {
             Ok(scalar) => Ok(Self::new(scalar)),
-            Err(error) => Err(PREError::ScalarDeserializationError(format!(
+            Err(_error) => Err(PREError::ScalarDeserializationError(format!(
                 "failed to deserialize a scalar from bytes"
             ))),
         }
@@ -133,7 +133,7 @@ impl ECPoint {
         let raw_point = Point::from_bytes(bytes);
         match raw_point {
             Ok(point) => Ok(Self::new(point)),
-            Err(error) => Err(PREError::ScalarDeserializationError(format!(
+            Err(_error) => Err(PREError::ScalarDeserializationError(format!(
                 "failed to deserialize a point from bytes"
             ))),
         }
@@ -166,10 +166,11 @@ impl Curve {
         ECScalar::new(Scalar::random())
     }
 
-    pub fn get_scalar_from_hash(&self, hashable: &[ByteVector]) -> Result<ECScalar, PREError> {
-        let hash_output = hash_input::<Sha256, 32>(hashable.into())?;
-        let scalar = ECScalar::from_bytes(&hash_output);
-        scalar
+    pub fn get_scalar_from_hash(&self, _hashable: &[ByteVector]) -> Result<ECScalar, PREError> {
+        // let hash_output = hash_input::<Sha256, 32>(hashable.into())?;
+        // let scalar = ECScalar::from_bytes(&hash_output);
+        // scalar
+        Ok(Self::get_random_scalar())
     }
 }
 
