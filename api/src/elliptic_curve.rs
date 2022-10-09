@@ -1,5 +1,5 @@
-use crate::ByteVector;
-use crate::PREError;
+use crate::internals::ByteVector;
+use crate::internals::PREError;
 use serde::{Deserialize, Serialize};
 
 pub use curv::elliptic::curves::Ed25519;

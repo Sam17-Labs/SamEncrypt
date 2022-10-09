@@ -1,5 +1,5 @@
-use crate::ByteVector;
-use crate::PREError;
+use crate::internals::ByteVector;
+use crate::internals::PREError;
 pub use sha2::{Digest, Sha256, Sha512};
 use std::mem::MaybeUninit;
 

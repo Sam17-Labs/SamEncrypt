@@ -1,5 +1,6 @@
 use crate::elliptic_curve::{Curve, ECOp, ECPoint, ECScalar};
-use crate::{ByteVector, PREError};
+use crate::internals::Nonce;
+use crate::internals::{decrypt, encrypt, generate_random_nonce, ByteVector, PREError};
 use sha2::{Sha256, Sha512};
 
 // use crate::decrypt;
@@ -108,16 +109,16 @@ impl PREState {
     /// TODO(blaise): Figure out what the authenticate boolean variable means.
 
     #[allow(dead_code)]
-    async fn encrypt_symmetric(&self, _data: &ByteVector, _key_hash: &ByteVector) -> ByteVector {
-        // let key: &[u8] = &key_hash[0..32];
-        // let nonce: &[u8] = &key_hash[32..32 + 12];
+    async fn encrypt_symmetric(&self, data: &ByteVector, key_hash: &ByteVector) -> ByteVector {
+        let key: &[u8] = &key_hash[0..32];
+        let nonce: &str = generate_random_nonce();
 
-        // let cipher_text: ByteVector = encrypt(data, &key.to_vec(), Some(nonce.to_vec()), false)
-        //     .await
-        //     .unwrap();
+        let cipher_text: ByteVector =
+            encrypt(data, key, Some(Nonce::from_slice(nonce.as_bytes())), false)
+                .await
+                .unwrap();
 
-        // cipher_text
-        vec![]
+        cipher_text
     }
 
     /// Decrypt symmetrically
@@ -132,19 +133,22 @@ impl PREState {
     #[allow(dead_code)]
     async fn decrypt_symmetric(
         &self,
-        _ciphertext: &ByteVector,
-        _key_hash: &ByteVector,
+        ciphertext: &ByteVector,
+        key_hash: &ByteVector,
     ) -> ByteVector {
-        // let key: &[u8] = &key_hash[0..32];
-        // let nonce: &[u8] = &key_hash[32..32 + 12];
+        let key: &[u8] = &key_hash[0..32];
+        let nonce: &str = generate_random_nonce();
 
-        // let original_plain_text: ByteVector =
-        //     decrypt(ciphertext, &key.to_vec(), Some(nonce.to_vec()), false)
-        //         .await
-        //         .unwrap();
+        let original_plain_text: ByteVector = decrypt(
+            ciphertext,
+            key,
+            Some(Nonce::from_slice(nonce.as_bytes())),
+            false,
+        )
+        .await
+        .unwrap();
 
-        // original_plain_text
-        vec![]
+        original_plain_text
     }
 
     /// Handles the self-encryption of the original message
@@ -423,103 +427,103 @@ impl PREState {
     }
 }
 
-// #[cfg(test)]
-// mod self_encryption_tests {
-//     use super::*;
-//     use futures::executor::block_on;
-//     use std::fs;
-//     use std::io::prelude::*;
-//     use std::path::Path;
+#[cfg(test)]
+mod self_encryption_tests {
+    use super::*;
+    use futures::executor::block_on;
+    use std::fs;
+    use std::io::prelude::*;
+    use std::path::Path;
 
-//     const NUM_TEST_FILES: usize = 5;
-//     const TEST_DIR_PATH: &str = "test-files";
+    const NUM_TEST_FILES: usize = 5;
+    const TEST_DIR_PATH: &str = "test-files";
 
-//     fn generate_test_files() {
-//         fs::create_dir_all(TEST_DIR_PATH).unwrap();
+    fn generate_test_files() {
+        fs::create_dir_all(TEST_DIR_PATH).unwrap();
 
-//         for i in 0..NUM_TEST_FILES {
-//             match fs::File::create(format!("test-files/file{}.txt", i)) {
-//                 Ok(mut file) => {
-//                     let buffer = format!("This is test file {}", i + 1);
-//                     file.write_all(buffer.as_bytes())
-//                         .expect("failed to write to test file");
-//                 }
-//                 Err(_e) => {
-//                     panic!(
-//                         "{}",
-//                         format!("failed to create test file: file{}.txt", i + 1)
-//                     );
-//                 }
-//             }
-//         }
-//     }
+        for i in 0..NUM_TEST_FILES {
+            match fs::File::create(format!("test-files/file{}.txt", i)) {
+                Ok(mut file) => {
+                    let buffer = format!("This is test file {}", i + 1);
+                    file.write_all(buffer.as_bytes())
+                        .expect("failed to write to test file");
+                }
+                Err(_e) => {
+                    panic!(
+                        "{}",
+                        format!("failed to create test file: file{}.txt", i + 1)
+                    );
+                }
+            }
+        }
+    }
 
-//     fn remove_test_files() {
-//         fs::remove_dir_all(TEST_DIR_PATH).unwrap();
-//     }
+    fn remove_test_files() {
+        fs::remove_dir_all(TEST_DIR_PATH).unwrap();
+    }
 
-//     // Produce a byte vector representation for a given file path
-//     #[cfg(unix)]
-//     fn path_to_bytes<P: AsRef<Path>>(path: P) -> Vec<u8> {
-//         use std::os::unix::ffi::OsStrExt;
+    // Produce a byte vector representation for a given file path
+    #[cfg(unix)]
+    fn path_to_bytes<P: AsRef<Path>>(path: P) -> Vec<u8> {
+        use std::os::unix::ffi::OsStrExt;
 
-//         path.as_ref().as_os_str().as_bytes().to_vec()
-//     }
+        path.as_ref().as_os_str().as_bytes().to_vec()
+    }
 
-//     fn generate_plaintext_messages() -> Vec<(&'static str, &'static str)> {
-//         let messages = vec![
-//             ("first message to encrypt", "tag1"),
-//             ("second message to encrypt", "tag2"),
-//             ("third message to encrypt", "tag3"),
-//         ];
-//         messages
-//     }
+    fn generate_plaintext_messages() -> Vec<(&'static str, &'static str)> {
+        let messages = vec![
+            ("first message to encrypt", "tag1"),
+            ("second message to encrypt", "tag2"),
+            ("third message to encrypt", "tag3"),
+        ];
+        messages
+    }
 
-//     #[test]
-//     fn test_self_encryption() {
-//         let plaintext_messages = generate_plaintext_messages();
-//         let curve: Curve = Curve::new();
-//         let pre_state = PREState::new(curve);
+    // #[test]
+    // fn test_self_encryption() {
+    //     let plaintext_messages = generate_plaintext_messages();
+    //     let curve: Curve = Curve::new();
+    //     let pre_state = PREState::new(curve);
 
-//         for (message, tag) in plaintext_messages {
-//             let message_as_bytes = message.as_bytes();
-//             let encrypted_message: EncryptedMessage =
-//                 block_on(pre_state.self_encrypt(message_as_bytes.into(), tag.as_bytes().into()))
-//                     .unwrap();
+    //     for (message, tag) in plaintext_messages {
+    //         let message_as_bytes = message.as_bytes();
+    //         let encrypted_message: EncryptedMessage =
+    //             block_on(pre_state.self_encrypt(message_as_bytes.into(), tag.as_bytes().into()))
+    //                 .unwrap();
 
-//             let decrypted_ciphertext: ByteVector =
-//                 block_on(pre_state.self_decrypt(encrypted_message.clone())).unwrap();
+    //         let decrypted_ciphertext: ByteVector =
+    //             block_on(pre_state.self_decrypt(encrypted_message.clone())).unwrap();
 
-//             // check equality of the original text and the decrypted text
-//             assert_eq!(decrypted_ciphertext.as_slice(), message_as_bytes);
+    //         // check equality of the original text and the decrypted text
+    //         assert_eq!(decrypted_ciphertext.as_slice(), message_as_bytes);
 
-//             // check equality of the tag used
-//             assert_eq!(tag.as_bytes(), encrypted_message.tag.as_slice());
-//         }
-//     }
+    //         // check equality of the tag used
+    //         assert_eq!(tag.as_bytes(), encrypted_message.tag.as_slice());
+    //     }
+    // }
 
-//     #[test]
-//     fn test_file_self_encrypt() {
-//         generate_test_files();
+    #[test]
+    fn test_file_self_encrypt() {
+        generate_test_files();
 
-//         for dir_entry in fs::read_dir(TEST_DIR_PATH).unwrap() {
-//             let path_buf = dir_entry.unwrap().path();
-//             // let _file = fs::OpenOptions::new().read(true).open(path_buf).expect("Failed to read test file");
+        for dir_entry in fs::read_dir(TEST_DIR_PATH).unwrap() {
+            let path_buf = dir_entry.unwrap().path();
+            // let _file = fs::OpenOptions::new().read(true).open(path_buf).expect("Failed to read test file");
 
-//             let bytes: ByteVector = path_to_bytes(path_buf.as_path());
+            let bytes: ByteVector = path_to_bytes(path_buf.as_path());
 
-//             let pre_state: PREState = PREState::new(Curve::new());
-//             let encrypted_file: EncryptedMessage = block_on(
-//                 pre_state.self_encrypt(bytes.clone(), String::from("dummy tag").into_bytes()),
-//             )
-//             .expect("failed to encrypt file");
+            let pre_state: PREState = PREState::new(Curve::new());
+            let encrypted_file: EncryptedMessage = block_on(
+                pre_state.self_encrypt(bytes.clone(), String::from("dummy tag").into_bytes()),
+            )
+            .expect("failed to encrypt file");
 
-//             let decrypted_file: ByteVector =
-//                 block_on(pre_state.self_decrypt(encrypted_file)).expect("failed to decrypt file");
+            let decrypted_file: ByteVector =
+                block_on(pre_state.self_decrypt(encrypted_file)).expect("failed to decrypt file");
 
-//             assert_eq!(decrypted_file.as_slice(), bytes.as_slice());
-//         }
+            assert_eq!(decrypted_file.as_slice(), bytes.as_slice());
+        }
 
-//         remove_test_files();
-//     }
-// }
+        remove_test_files();
+    }
+}
