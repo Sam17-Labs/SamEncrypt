@@ -1,5 +1,5 @@
 [package]
-name = "se_pre_scheme"
+name = "SamEncrypt"
 version = "0.1.0"
 authors = [
     "Blaise Munyampirwa <blaise@sam17.co>",

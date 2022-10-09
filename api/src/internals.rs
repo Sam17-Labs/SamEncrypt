@@ -10,7 +10,7 @@ use std::fmt::{Display, Formatter};
 
 pub type ByteVector = Vec<u8>;
 pub const AUTHENTICATION_BYTES: usize = 16;
-pub const NONCE_SIZE: u8 = 12;
+pub const NONCE_SIZE: usize = 12;
 
 /// Custom library error messages
 #[derive(Debug, Clone, PartialEq)]
@@ -127,12 +127,12 @@ pub async fn decrypt(
 
     match nonce {
         Some(nonce_value) => {
-            let decrypted_message = cipher.decrypt(nonce_value, ciphertext).unwrap();
+            let decrypted_message = cipher.decrypt(nonce_value, ciphertext)?;
             Ok(decrypted_message)
         }
         None => {
             let nonce_value = Nonce::from_slice(generate_random_nonce().as_bytes());
-            let decrypted_message = cipher.decrypt(nonce_value, ciphertext).unwrap();
+            let decrypted_message = cipher.decrypt(nonce_value, ciphertext)?;
             Ok(decrypted_message)
         }
     }

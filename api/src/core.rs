@@ -1,11 +1,10 @@
 use crate::elliptic_curve::{Curve, ECOp, ECPoint, ECScalar};
-use crate::internals::Nonce;
-use crate::internals::{decrypt, encrypt, generate_random_nonce, ByteVector, PREError};
-use sha2::{Sha256, Sha512};
-
-// use crate::decrypt;
-// use crate::encrypt;
 use crate::hashing::hash_input;
+use crate::internals::{decrypt, encrypt, generate_random_nonce, ByteVector, PREError};
+use crate::internals::{Nonce, NONCE_SIZE};
+use crate::test_utils::bytes_to_str_utf8;
+use sha2::{Sha256, Sha512};
+use std::str;
 
 #[derive(Debug, Clone)]
 pub(crate) struct ReEncryptionKey {
@@ -25,7 +24,8 @@ pub(crate) struct EncryptedMessage {
 
 //TODO: come up with descriptive field names. Haven't done it now because
 // I'm not yet exactly sure what these vectors represent
-#[allow(dead_code)]
+
+#[derive(Debug, Clone)]
 pub(crate) struct ReEncryptedMessage {
     d1: ByteVector,
     d2: ByteVector,
@@ -90,7 +90,7 @@ impl PREState {
             r2: public_key.multiply(&random_scalar).to_bytes(),
             r3: self
                 .curve
-                .get_scalar_from_hash(&vec![tag.clone(), private_key])
+                .get_scalar_from_hash(vec![tag.clone(), private_key])
                 .unwrap()
                 .to_bytes(),
         })
@@ -111,14 +111,18 @@ impl PREState {
     #[allow(dead_code)]
     async fn encrypt_symmetric(&self, data: &ByteVector, key_hash: &ByteVector) -> ByteVector {
         let key: &[u8] = &key_hash[0..32];
-        let nonce: &str = generate_random_nonce();
+        let nonce: &[u8] = &key_hash[32..32 + NONCE_SIZE];
 
-        let cipher_text: ByteVector =
-            encrypt(data, key, Some(Nonce::from_slice(nonce.as_bytes())), false)
-                .await
-                .unwrap();
+        dbg!(nonce);
 
-        cipher_text
+        let cipher_text = encrypt(data, key, Some(Nonce::from_slice(nonce)), false).await;
+
+        match cipher_text {
+            Ok(encrypted_msg) => encrypted_msg,
+            Err(error) => {
+                panic!("Encrypt Symmetric Error : {} \n", error);
+            }
+        }
     }
 
     /// Decrypt symmetrically
@@ -137,18 +141,19 @@ impl PREState {
         key_hash: &ByteVector,
     ) -> ByteVector {
         let key: &[u8] = &key_hash[0..32];
-        let nonce: &str = generate_random_nonce();
+        let nonce: &[u8] = &key_hash[32..32 + NONCE_SIZE];
 
-        let original_plain_text: ByteVector = decrypt(
-            ciphertext,
-            key,
-            Some(Nonce::from_slice(nonce.as_bytes())),
-            false,
-        )
-        .await
-        .unwrap();
+        dbg!(nonce);
 
-        original_plain_text
+        let original_plain_text =
+            decrypt(ciphertext, key, Some(Nonce::from_slice(nonce)), false).await;
+
+        match original_plain_text {
+            Ok(message) => message,
+            Err(error) => {
+                panic!("Decrypt Symmetric Error : {} \n", error);
+            }
+        }
     }
 
     /// Handles the self-encryption of the original message
@@ -191,12 +196,15 @@ impl PREState {
             .encrypt_symmetric(&message, &symmetric_encryption_key.to_vec())
             .await;
 
+        // dbg!(message.clone());
+        dbg!(public_key.to_bytes());
+
         let message_check_sum: [u8; 64] =
             hash_input::<Sha512, 64>(vec![message, public_key.to_bytes()]).unwrap();
 
         let alp: Vec<u8> = self
             .curve
-            .get_scalar_from_hash(&vec![tag.clone(), self.private_key.to_bytes()])
+            .get_scalar_from_hash(vec![tag.clone(), self.private_key.to_bytes()])
             .unwrap()
             .to_bytes();
 
@@ -234,7 +242,7 @@ impl PREState {
         let private_key: Vec<u8> = self.private_key.to_bytes();
         let alp: Vec<u8> = self
             .curve
-            .get_scalar_from_hash(&vec![encrypted_message.tag.clone(), private_key.clone()])?
+            .get_scalar_from_hash(vec![encrypted_message.tag.clone(), private_key.clone()])?
             .to_bytes();
 
         let first_check: [u8; 64] = hash_input::<Sha512, 64>(vec![
@@ -244,9 +252,8 @@ impl PREState {
             alp.clone(),
         ])?;
 
-        let size: usize = encrypted_message.overall_check_sum.len();
+        let overall_checksum_length: usize = encrypted_message.overall_check_sum.len();
 
-        // Check number of matching elements in the two vectors
         let mut matching_values: usize = encrypted_message
             .overall_check_sum
             .iter()
@@ -254,7 +261,7 @@ impl PREState {
             .filter(|&(x, y)| x == y)
             .count();
 
-        if matching_values != size {
+        if matching_values != overall_checksum_length {
             return Err(PREError::OverallCheckSumFailure(String::from(
                 "self-decrypt: overall checksum failure.\n",
             )));
@@ -273,18 +280,19 @@ impl PREState {
             .curve
             .get_point_from_bytes(&encrypted_message.encrypted_key)?;
 
-        let key: [u8; 64] = hash_input::<Sha512, 64>(vec![encrypted_key
-            .eval(&hg, ECOp::Subtract)
-            .unwrap()
-            .to_bytes()])
-        .unwrap();
+        let recovered_public_key: ByteVector =
+            encrypted_key.eval(&hg, ECOp::Subtract).unwrap().to_bytes();
+
+        let key: [u8; 64] = hash_input::<Sha512, 64>(vec![recovered_public_key.clone()]).unwrap();
 
         let data: Vec<u8> = self
             .decrypt_symmetric(&encrypted_message.data, &key.to_vec())
             .await;
 
+        dbg!(data.clone());
+        dbg!(recovered_public_key.clone());
         // hash3
-        let check2: [u8; 64] = hash_input::<Sha512, 64>(vec![data.clone(), key.to_vec()])?;
+        let check2: [u8; 64] = hash_input::<Sha512, 64>(vec![data.clone(), recovered_public_key])?;
 
         matching_values = encrypted_message
             .message_check_sum
@@ -295,7 +303,7 @@ impl PREState {
 
         if matching_values != encrypted_message.message_check_sum.len() {
             return Err(PREError::MessageCheckSumFailure(String::from(
-                "self-decrypt: message checksum failure.\n",
+                "self-decrypt: message checksum failure.",
             )));
         }
 
@@ -345,7 +353,7 @@ impl PREState {
         // TODO (blaise): Remove these clones by using pass by reference
         let bet = self
             .curve
-            .get_scalar_from_hash(&vec![
+            .get_scalar_from_hash(vec![
                 txg.to_bytes(),
                 message.data.clone(),
                 message.message_check_sum.clone(),
@@ -389,7 +397,7 @@ impl PREState {
 
         let b_inv = self
             .curve
-            .get_scalar_from_hash(&vec![
+            .get_scalar_from_hash(vec![
                 txg.to_bytes(),
                 re_encrypted_message.d2.clone(),
                 re_encrypted_message.d3.clone(),
@@ -479,28 +487,28 @@ mod self_encryption_tests {
         messages
     }
 
-    // #[test]
-    // fn test_self_encryption() {
-    //     let plaintext_messages = generate_plaintext_messages();
-    //     let curve: Curve = Curve::new();
-    //     let pre_state = PREState::new(curve);
+    #[test]
+    fn test_self_encryption() {
+        let plaintext_messages = generate_plaintext_messages();
+        let curve: Curve = Curve::new();
+        let pre_state = PREState::new(curve);
 
-    //     for (message, tag) in plaintext_messages {
-    //         let message_as_bytes = message.as_bytes();
-    //         let encrypted_message: EncryptedMessage =
-    //             block_on(pre_state.self_encrypt(message_as_bytes.into(), tag.as_bytes().into()))
-    //                 .unwrap();
+        for (message, tag) in plaintext_messages {
+            let message_as_bytes = message.as_bytes();
+            let encrypted_message: EncryptedMessage =
+                block_on(pre_state.self_encrypt(message_as_bytes.into(), tag.as_bytes().into()))
+                    .unwrap();
 
-    //         let decrypted_ciphertext: ByteVector =
-    //             block_on(pre_state.self_decrypt(encrypted_message.clone())).unwrap();
+            let decrypted_ciphertext: ByteVector =
+                block_on(pre_state.self_decrypt(encrypted_message.clone())).unwrap();
 
-    //         // check equality of the original text and the decrypted text
-    //         assert_eq!(decrypted_ciphertext.as_slice(), message_as_bytes);
+            // check equality of the original text and the decrypted text
+            assert_eq!(decrypted_ciphertext.as_slice(), message_as_bytes);
 
-    //         // check equality of the tag used
-    //         assert_eq!(tag.as_bytes(), encrypted_message.tag.as_slice());
-    //     }
-    // }
+            // check equality of the tag used
+            assert_eq!(tag.as_bytes(), encrypted_message.tag.as_slice());
+        }
+    }
 
     #[test]
     fn test_file_self_encrypt() {
@@ -527,3 +535,6 @@ mod self_encryption_tests {
         remove_test_files();
     }
 }
+
+#[cfg(test)]
+mod test_re_encryption {}

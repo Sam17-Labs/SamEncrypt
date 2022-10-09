@@ -1,5 +1,5 @@
-use crate::internals::ByteVector;
-use crate::internals::PREError;
+use crate::hashing::hash_input;
+use crate::internals::{ByteVector, PREError};
 use serde::{Deserialize, Serialize};
 
 pub use curv::elliptic::curves::Ed25519;
@@ -7,6 +7,7 @@ pub use curv::elliptic::curves::EncodedPoint;
 pub use curv::elliptic::curves::EncodedScalar;
 pub use curv::elliptic::curves::Point;
 pub use curv::elliptic::curves::Scalar;
+use sha2::Sha256;
 
 // use crate::hashing::hash_input;
 // use sha2::Sha256;
@@ -166,11 +167,10 @@ impl Curve {
         ECScalar::new(Scalar::random())
     }
 
-    pub fn get_scalar_from_hash(&self, _hashable: &[ByteVector]) -> Result<ECScalar, PREError> {
-        // let hash_output = hash_input::<Sha256, 32>(hashable.into())?;
-        // let scalar = ECScalar::from_bytes(&hash_output);
-        // scalar
-        Ok(Self::get_random_scalar())
+    pub fn get_scalar_from_hash(&self, hashable: Vec<ByteVector>) -> Result<ECScalar, PREError> {
+        let hash_output = hash_input::<Sha256, 32>(hashable)?;
+        let scalar = ECScalar::from_bytes(&hash_output);
+        scalar
     }
 }
 
