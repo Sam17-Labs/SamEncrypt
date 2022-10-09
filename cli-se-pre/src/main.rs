@@ -1,9 +1,13 @@
+// use sam_encrypt::*;
+
+mod cli; 
+
+use cli::SamEncryptAPIArgs;
+use clap::Parser;
 
 
-use se_pre_scheme::sha256::testing;
 
 fn main() {
-    // CLI for quick testing. Currently serves as the main entry point to access
-    // the api crate.
-    testing();
+    let args = SamEncryptAPIArgs::parse();
+
 }
