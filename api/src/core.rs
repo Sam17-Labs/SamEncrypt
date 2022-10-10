@@ -1,19 +1,21 @@
 use crate::elliptic_curve::{Curve, ECOp, ECPoint, ECScalar};
 use crate::hashing::hash_input;
-use crate::internals::{decrypt, encrypt, generate_random_nonce, ByteVector, PREError};
+use crate::internals::{decrypt, encrypt, ByteVector, PREError};
 use crate::internals::{Nonce, NONCE_SIZE};
-// use crate::test_utils::bytes_to_str_utf8;
-use sha2::{Sha256, Sha512};
 
-#[derive(Debug, Clone)]
-pub(crate) struct ReEncryptionKey {
+use sha2::{Sha256, Sha512};
+// use serde::ser::{Serialize};
+// use serde::de::Deserialize;
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ReEncryptionKey {
     r1: ByteVector,
     r2: ByteVector,
     r3: ByteVector,
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct EncryptedMessage {
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct EncryptedMessage {
     tag: ByteVector,
     encrypted_key: ByteVector,
     message_check_sum: ByteVector,
@@ -24,8 +26,8 @@ pub(crate) struct EncryptedMessage {
 //TODO: come up with descriptive field names. Haven't done it now because
 // I'm not yet exactly sure what these vectors represent
 
-#[derive(Debug, Clone)]
-pub(crate) struct ReEncryptedMessage {
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ReEncryptedMessage {
     d1: ByteVector,
     d2: ByteVector,
     d3: ByteVector,
@@ -33,11 +35,10 @@ pub(crate) struct ReEncryptedMessage {
     d5: ByteVector,
 }
 
-#[allow(dead_code)]
-pub(crate) struct PREState {
-    curve: Curve,
+pub struct PREState {
+    pub curve: Curve,
     private_key: ECScalar,
-    public_key: ECPoint,
+    pub public_key: ECPoint,
 }
 
 impl PREState {
@@ -69,7 +70,7 @@ impl PREState {
     /// * `tag` - A bytevector representing a certain short message associated with
     ///           the re-encryption key
     #[allow(dead_code)]
-    fn generate_re_encryption_key(
+    pub fn generate_re_encryption_key(
         &self,
         pub_k: &ByteVector,
         tag: ByteVector,
@@ -112,7 +113,7 @@ impl PREState {
         let key: &[u8] = &key_hash[0..32];
         let nonce: &[u8] = &key_hash[32..32 + NONCE_SIZE];
 
-        dbg!(nonce);
+        // dbg!(nonce);
 
         let cipher_text = encrypt(data, key, Some(Nonce::from_slice(nonce)), false).await;
 
@@ -142,7 +143,7 @@ impl PREState {
         let key: &[u8] = &key_hash[0..32];
         let nonce: &[u8] = &key_hash[32..32 + NONCE_SIZE];
 
-        dbg!(nonce);
+        // dbg!(nonce);
 
         let original_plain_text =
             decrypt(ciphertext, key, Some(Nonce::from_slice(nonce)), false).await;
@@ -164,7 +165,7 @@ impl PREState {
     /// * `tag` - A bytevector representing the tag with which to self-encrypt
     ///     the message.
     #[allow(dead_code)]
-    async fn self_encrypt(
+    pub async fn self_encrypt(
         &self,
         message: ByteVector,
         tag: ByteVector,
@@ -195,8 +196,8 @@ impl PREState {
             .encrypt_symmetric(&message, &symmetric_encryption_key.to_vec())
             .await;
 
-        dbg!(message.clone());
-        dbg!(public_key.to_bytes());
+        // dbg!(message.clone());
+        // dbg!(public_key.to_bytes());
 
         let message_check_sum: [u8; 64] =
             hash_input::<Sha512, 64>(vec![message, public_key.to_bytes()]).unwrap();
@@ -288,8 +289,8 @@ impl PREState {
             .decrypt_symmetric(&encrypted_message.data, &key.to_vec())
             .await;
 
-        dbg!(data.clone());
-        dbg!(recovered_public_key.clone());
+        // dbg!(data.clone());
+        // dbg!(recovered_public_key.clone());
         // hash3
         let check2: [u8; 64] = hash_input::<Sha512, 64>(vec![data.clone(), recovered_public_key])?;
 
@@ -437,7 +438,7 @@ impl PREState {
 #[cfg(test)]
 mod self_encryption_tests {
     use super::*;
-    use crate::test_utils::{bytes_to_str_utf8, generate_test_files, remove_test_files};
+    use crate::test_utils::{bytes_to_str_utf8, generate_test_files};
     use futures::executor::block_on;
     use std::fs;
     use std::path::Path;
@@ -446,7 +447,7 @@ mod self_encryption_tests {
 
     // Produce a byte vector representation for a given file path
     #[cfg(unix)]
-    fn path_to_bytes<P: AsRef<Path>>(path: P) -> Vec<u8> {
+    fn _path_to_bytes<P: AsRef<Path>>(path: P) -> Vec<u8> {
         use std::os::unix::ffi::OsStrExt;
 
         path.as_ref().as_os_str().as_bytes().to_vec()
@@ -506,7 +507,7 @@ mod self_encryption_tests {
             let decrypted_file: ByteVector =
                 block_on(pre_state.self_decrypt(encrypted_file)).expect("failed to decrypt file");
 
-            dbg!(bytes_to_str_utf8(decrypted_file.as_slice()));
+            // dbg!(bytes_to_str_utf8(decrypted_file.as_slice()));
             assert_eq!(decrypted_file.as_slice(), contents.as_bytes());
         }
 

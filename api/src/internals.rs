@@ -9,6 +9,8 @@ use rand::seq::SliceRandom;
 use std::fmt::{Display, Formatter};
 
 pub type ByteVector = Vec<u8>;
+
+
 pub const AUTHENTICATION_BYTES: usize = 16;
 pub const NONCE_SIZE: usize = 12;
 

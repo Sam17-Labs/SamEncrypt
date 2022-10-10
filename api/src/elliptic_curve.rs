@@ -17,17 +17,17 @@ pub trait CurveParameter {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct ECScalar {
+pub struct ECScalar {
     value: Scalar<Ed25519>,
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct ECPoint {
+pub struct ECPoint {
     value: Point<Ed25519>,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Curve {
+pub struct Curve {
     pub base_point: ECPoint,
 }
 

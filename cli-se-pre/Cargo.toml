@@ -12,6 +12,8 @@ edition = "2021"
 
 
 [dependencies]
-# sam_encrypt = {path = "../api" }
-# curv-kzen = { version = "0.9.0" }
+sam_encrypt = {path = "../api" }
 clap = { version = "4.0.11", features = ["derive"]}
+serde = { version = "1.0.144" }
+serde_cbor = { version = "0.11.2" }
+futures = { version = "0.3.24" }
