@@ -1,5 +1,5 @@
 [package]
-name = "se_pre_scheme"
+name = "sam_encrypt"
 version = "0.1.0"
 authors = [
     "Blaise Munyampirwa <blaise@sam17.co>",
@@ -13,6 +13,25 @@ edition = "2021"
 [lib]
 
 
-
 [dependencies]
 sha2 = { version = "0.10.2" }
+anyhow = { version = "1.0.61" }
+hex = { version = "0.*"}
+cipher = { version = "0.*" }
+curv-kzen = { version = "0.9.0" }
+futures = { version = "0.3.24" }
+aes-gcm-siv = { version = "0.11.1" }
+lazy_static = { version = "1.4.0" }
+rand = { version = "0.8.5" }
+serde = { version = "1.0.144", features=["derive"] }
+serde_cbor = { version = "0.11.2" }
+
+# [[bench]]
+# name = "bench"
+# harness = false
+
+[profile.release]
+opt-level = 3
+strip = true
+lto = true
+# debug = true

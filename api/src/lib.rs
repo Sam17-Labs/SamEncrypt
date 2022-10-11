@@ -1,26 +1,16 @@
+#![cfg_attr(feature = "unstable", feature(test))]
+#![doc(html_no_source)]
+
+//! SamEncrypt provides a set of cryptographic primitives for building a
+//! single-hop proxy self re-encryption scheme.
+//!
+//! The implementation is based on the original paper by Selvi et al. entitled
+//! [Sharing of Encrypted files in Blockchain Made Simpler](https://eprint.iacr.org/2019/418.pdf)  
+//!
+//! Start exploring the [Api documentation](api/index.html)
+
 pub mod core;
-pub mod curve;
-pub mod sha256;
-
-use std::fmt::{Display, Formatter, Result};
-
-pub type ByteVector = Vec<u8>;
-
-/// Custom library error messages
-pub enum PREError {
-    MessageCheckSumFailure(String),
-    OverallCheckSumFailire(String),
-}
-
-impl Display for PREError {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                PREError::MessageCheckSumFailure(msg) => format!("MessageCheckSumFailure: {}", msg),
-                PREError::OverallCheckSumFailire(msg) => format!("OverallCheckSumFailure: {}", msg),
-            }
-        )
-    }
-}
+pub mod elliptic_curve;
+pub mod hashing;
+pub mod internals;
+pub mod test_utils;
