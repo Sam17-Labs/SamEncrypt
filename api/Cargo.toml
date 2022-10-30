@@ -1,6 +1,6 @@
 [package]
 name = "sam_encrypt"
-version = "0.1.0"
+version = "0.1.1"
 authors = [
     "Blaise Munyampirwa <blaise@sam17.co>",
     "Roberto Berwa <berwa@sam17.co>"
