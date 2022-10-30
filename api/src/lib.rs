@@ -77,8 +77,7 @@
 //! ## Re-Encrypt Files
 //! This allows a proxy to re-encrypt an already encrypted file.
 //! ```
-//! use sam_encrypt::{core::{EncryptedMessage, ReEncryptionKey, ReEncryptedMessage, PREState},
-//!                   elliptic_curve};
+//! use sam_encrypt::{core::{EncryptedMessage, ReEncryptionKey, ReEncryptedMessage, PREState}};
 //! use sam_encrypt::elliptic_curve::Curve;
 //! use std::error::Error;
 //! use std::fs::File;
