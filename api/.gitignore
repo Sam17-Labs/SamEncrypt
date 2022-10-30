@@ -1,9 +1,11 @@
 
-# temporary directories
+# temporary directories and files
 target
+publish.sh
 
 #Environment variables
 .env 
+
 
 #cargo lock
 cargo.lock
