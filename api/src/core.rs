@@ -507,7 +507,7 @@ mod self_encryption_tests {
             let decrypted_file: ByteVector =
                 block_on(pre_state.self_decrypt(encrypted_file)).expect("failed to decrypt file");
 
-            // dbg!(bytes_to_str_utf8(decrypted_file.as_slice()));
+            dbg!(bytes_to_str_utf8(decrypted_file.as_slice()));
             assert_eq!(decrypted_file.as_slice(), contents.as_bytes());
         }
 

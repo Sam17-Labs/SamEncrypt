@@ -111,4 +111,4 @@ pub mod core;
 pub mod elliptic_curve;
 pub mod hashing;
 pub mod internals;
-pub mod test_utils;
+mod test_utils;

@@ -2,6 +2,9 @@
 # temporary directories
 target
 
+#Environment variables
+.env 
+
 #cargo lock
 cargo.lock
 
