@@ -1,3 +1,5 @@
+#![allow(warnings, unused)]
+
 use std::fs;
 use std::io::Write;
 use std::str;
@@ -7,7 +9,7 @@ const TEST_DIR_PATH: &str = "test-files";
 
 ///A bunch of utility functions for testing
 
-pub fn hex_to_string(data: &[u8]) -> String {
+pub(crate) fn hex_to_string(data: &[u8]) -> String {
     let mut output = String::new();
     for item in data {
         let hex_formatted_str = format!("{:02x}", item);
@@ -16,7 +18,7 @@ pub fn hex_to_string(data: &[u8]) -> String {
     output
 }
 
-pub fn bytes_to_str_utf8(bytes: &[u8]) -> &str {
+pub(crate) fn bytes_to_str_utf8(bytes: &[u8]) -> &str {
     let string = match str::from_utf8(bytes) {
         Ok(value) => value,
         Err(error) => {
