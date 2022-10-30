@@ -8,7 +8,7 @@ authors = [
 description = "A crate that provides a set of cryptographic primitives for building a proxy self re-encryption scheme."
 license = "Apache2.0"
 categories = ["cryptography"]
-readme = "README.md"
+readme = "../README.md"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
