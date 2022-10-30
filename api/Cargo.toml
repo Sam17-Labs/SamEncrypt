@@ -8,6 +8,8 @@ authors = [
 description = "A crate that provides a set of cryptographic primitives for building a proxy self re-encryption scheme."
 license = "Apache-2.0"
 categories = ["cryptography"]
+documentation = "https://docs.rs/sam_encrypt"
+repository = "https://github.com/Sam17-Labs/SamEncrypt"
 readme = "../README.md"
 edition = "2021"
 
