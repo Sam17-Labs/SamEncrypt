@@ -26,7 +26,7 @@ pub fn bytes_to_str_utf8(bytes: &[u8]) -> &str {
     string
 }
 
-pub(crate) fn generate_test_files() {
+pub fn generate_test_files() {
     fs::create_dir_all(TEST_DIR_PATH).unwrap();
 
     for i in 0..NUM_TEST_FILES {
@@ -46,6 +46,6 @@ pub(crate) fn generate_test_files() {
     }
 }
 
-pub(crate) fn remove_test_files() {
+pub fn remove_test_files() {
     fs::remove_dir_all(TEST_DIR_PATH).unwrap();
 }

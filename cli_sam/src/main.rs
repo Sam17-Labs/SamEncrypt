@@ -29,7 +29,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // initialize the protocol
     let curve = elliptic_curve::Curve::new();
-    let pre_state = PREState::new(curve);
+    let pre_state = PREState::new(curve.clone());
 
     match args.action {
         Init(init_command) => {
@@ -97,10 +97,10 @@ fn main() -> Result<(), Box<dyn Error>> {
             };
 
             // load encrypted file
-            let encrypted_file: EncryptedMessage = serde_cbor::from_reader(ciphertext_path)?;
+            let encrypted_file: EncryptedMessage = serde_cbor::from_reader(File::open(ciphertext_path)?)?;
 
             // load a serialized re-encryption key
-            let re_key: ReEncryptionKey = serde_cbor::from_reader(re_key_path)?;
+            let re_key: ReEncryptionKey = serde_cbor::from_reader(File::open(re_key_path)?)?;
 
             // re-encrypt ciphertext
 
@@ -108,6 +108,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             let re_encrypted_file: ReEncryptedMessage = pre_state
                 .re_encrypt(&public_key, encrypted_file, re_key, &curve)
                 .expect("failed to re-encrypt test file");
+
+            serde_cbor::to_writer(File::create(new_ciphertext_path)?, &re_encrypted_file)?;
+            
         }
         ReDecrypt(_f) => println!(""),
     }

@@ -552,8 +552,8 @@ mod test_re_encryption {
             let path_buf = dir_entry.unwrap().path();
 
             dbg!(path_buf.clone());
-            let file_contents =
-                std::fs::read_to_string(path_buf.as_path()).expect("Unable to read test file contents.");
+            let file_contents = std::fs::read_to_string(path_buf.as_path())
+                .expect("Unable to read test file contents.");
 
             // Self-encrypt the file contents.
             let encrypted_file: EncryptedMessage = block_on(pre_state.self_encrypt(
@@ -590,6 +590,5 @@ mod test_re_encryption {
         }
         // clean up
         remove_test_files();
-
     }
 }

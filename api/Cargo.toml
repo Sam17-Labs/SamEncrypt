@@ -5,12 +5,20 @@ authors = [
     "Blaise Munyampirwa <blaise@sam17.co>",
     "Roberto Berwa <berwa@sam17.co>"
 ]
+description = "A crate that provides a set of cryptographic primitives for building a proxy self re-encryption scheme."
+license = "MIT"
+categories = ["cryptography"]
+readme = "README.md"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 
 [lib]
+
+
+[dev-dependencies]
+criterion = { version = "0.4.0" }
 
 
 [dependencies]
@@ -26,12 +34,12 @@ rand = { version = "0.8.5" }
 serde = { version = "1.0.144", features=["derive"] }
 serde_cbor = { version = "0.11.2" }
 
-# [[bench]]
-# name = "bench"
-# harness = false
+
+[profile.dev]
+opt-level = 1
 
 [profile.release]
 opt-level = 3
+debug-assertions = false
 strip = true
 lto = true
-# debug = true
