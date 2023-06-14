@@ -2,7 +2,7 @@ use crate::hashing::hash_input;
 use crate::internals::{ByteVector, PREError};
 use serde::{Deserialize, Serialize};
 
-pub use curv::elliptic::curves::Ed25519;
+pub use curv::elliptic::curves::Ed25519; a
 pub use curv::elliptic::curves::EncodedPoint;
 pub use curv::elliptic::curves::EncodedScalar;
 pub use curv::elliptic::curves::Point;
